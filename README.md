@@ -2,16 +2,6 @@
 
 Small utility that searches for an image on your screen and clicks it when found.
 
-Project structure example:
-
-auto_clicker.py
-images/
-└── download_button_1.png
-requirements.txt
-setup.sh
-setup.bat
-build.sh
-
 ## Setup (Recommended)
 
 Run:

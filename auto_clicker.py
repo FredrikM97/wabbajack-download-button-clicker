@@ -6,8 +6,9 @@ import argparse
 from dataclasses import dataclass
 
 import pyautogui
-import keyboard
+from pyscreeze import ImageNotFoundException as PyscreezeImageNotFound
 
+import keyboard
 
 # -------------------- CONFIG --------------------
 
@@ -70,10 +71,16 @@ def apply_speed_preset(speed: str, retry_delay: float, loop_delay: float):
 def validate_image_path(path: str) -> None:
     if not os.path.isfile(path):
         print(f"[ERROR] Image file not found:\n{path}")
+        print("[HINT] Check the path or filename spelling.")
         sys.exit(1)
 
 
 def click_on_image(config: Config) -> bool:
+    """
+    Attempts to locate and click the image on the screen.
+    Handles image-not-found gracefully (both pyautogui and pyscreeze exceptions).
+    Returns True if successful, False otherwise.
+    """
     for attempt in range(1, config.retry_attempts + 1):
         try:
             location = pyautogui.locateOnScreen(
@@ -85,27 +92,27 @@ def click_on_image(config: Config) -> bool:
                 center = pyautogui.center(location)
                 original_position = pyautogui.position()
 
-                print(f"[✓] Found at {center} (attempt {attempt})")
+                print(f"[✓] Image found at {center} (attempt {attempt})")
                 pyautogui.click(center)
                 pyautogui.moveTo(original_position)
-
                 return True
 
-            print(f"[{attempt}/{config.retry_attempts}] Not found")
+            # If locateOnScreen returns None
+            print(f"[INFO] Image not found (attempt {attempt}/{config.retry_attempts}), retrying in {config.retry_delay}s...")
             time.sleep(config.retry_delay)
 
-        except Exception as e:
-            print(f"[ERROR] {e}")
+        except (pyautogui.ImageNotFoundException, PyscreezeImageNotFound):
+            # Gracefully handle missing image without crashing
+            print(f"[INFO] Image not found (attempt {attempt}/{config.retry_attempts}), retrying in {config.retry_delay}s...")
             time.sleep(config.retry_delay)
 
-    print("[!] Not found after retries")
+    print(f"[WARN] Image still not found after {config.retry_attempts} attempts. Will retry in next loop ({config.loop_delay}s).")
     return False
 
 
 # -------------------- MAIN LOOP --------------------
 
 running = True
-
 
 def stop_program():
     global running
@@ -123,7 +130,7 @@ def main():
     config = parse_arguments()
     validate_image_path(config.image_path)
 
-    print("Move this console window so it doesn't block the button.")
+    print("[INFO] Move this console window so it doesn't block the button.")
     input("Press Enter to start...\n")
 
     keyboard.add_hotkey(config.exit_hotkey, stop_program)
